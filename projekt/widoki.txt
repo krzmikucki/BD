@@ -1,0 +1,249 @@
+WIDOKI:
+1. dane_ksiazki - wyœwietlenie wszystkich informacji o ksi¹zkach (tabele: ksiazka + wydwanictwo + autor + gatunek).
+CREATE VIEW `dane_ksiazki` AS
+    
+	SELECT	tytul,
+
+        	ISBN,
+
+        	data_wydania,
+
+        	imie AS imie_autora,
+
+       	 	nazwisko AS nazwisko_autora,
+
+        	kraj_pochodzenia AS kraj_pochodzenia_autora,
+
+        	wydawnictwo.nazwa AS wydawnictwo,
+
+        	gatunek.nazwa AS gatunek
+
+	FROM
+    ksiazka join gatunek on ksiazka.idGatunek = gatunek.idGatunek 
+			join wydawnictwo on ksiazka.wydawnictwo_idWydawnictwo = wydawnictwo.idWydawnictwo 
+			join autor on autor.idAutor = ksiazka.idAutor;
+
+2. dane_wypozyczenia - wyœwietla informacje o wypo¿yczonej ksi¹¿ce (tabele : ksiazka + wypozyczenie).
+CREATE VIEW `dane_wypozyczenia` AS
+    
+	SELECT	idKsi¹¿ka,
+       
+		tytul,
+       
+		l_wypozyczen AS liczba_wypozyczen,
+       
+		data_Wypo¿yczenia,
+        
+		data_Zwrotu
+    
+	FROM
+    ksiazka join wypozyczenie on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka;
+
+3. kto_wypozyczyl - wyœwietla informacje o tym kto, jak¹ i za ile dni ma oddaæ ksi¹¿kê.
+CREATE VIEW `kto_wypozyczyl` AS
+    
+	SELECT 
+	uzytkownik.idUzytkownika,
+       
+		imie,
+        
+		nazwisko,
+        
+		idKsi¹¿ka,
+        
+		tytul,
+        
+		data_Wypo¿yczenia,
+        
+		datediff(data_Zwrotu, data_Wypo¿yczenia) AS za_ile_dni_oddac
+    
+	FROM
+    wypozyczenie join ksiazka on wypozyczenie.idKsiazka = ksiazka.idKsi¹¿ka
+		
+		join uzytkownik on wypozyczenie.idUzytkownika = uzytkownik.idUzytkownika
+        
+		join dane on uzytkownik.idUzytkownika = dane.idUzytkownika;
+
+4. dane_rezerwacji - kto zarezerwowa³ jak¹ ksi¹¿kê i na kiedy.
+CREATE VIEW `dane_rezerwacji` AS
+    
+	SELECT 
+	uzytkownik.idUzytkownika,
+        
+		imie,
+        
+		nazwisko,
+        
+		idKsi¹¿ka,
+        
+		tytul,
+        
+		data_rezerwacji,
+        
+		data_wypozyczenia AS data_wypozyczenia_zarezerwowanej_ksiazki
+    
+	FROM
+    rezerwacja join uzytkownik on rezerwacja.idUzytkownika = uzytkownik.idUzytkownika
+        
+		join dane on uzytkownik.idUzytkownika = dane.idUzytkownika
+        
+		join wypozyczenie on rezerwacja.idRezerwacja = wypozyczenie.idRezerwacja
+        
+		join ksiazka on wypozyczenie.idKsiazka = ksiazka.idKsi¹¿ka;
+
+5.dane_konta - informacje o u¿ytkowniku.
+CREATE VIEW `dane_konta` AS
+    
+	SELECT 
+	uzytkownik.idUzytkownika,
+        
+		login,
+        
+		imie,
+        
+		nazwisko,
+        
+		email,
+        
+		nr_tel,
+        
+		miasto,
+        
+		ulica,
+        
+		nr_budynku,
+        
+		nr_lokalu,
+        
+		zadluzenie,
+        
+		l_wypozyczonych,
+        
+		l_rezerwacji
+    
+	FROM
+    uzytkownik join dane on uzytkownik.idUzytkownika = dane.idUzytkownika
+        
+		join konto on uzytkownik.idUzytkownika = konto.idUzytkownika;
+		
+		
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PROCEDURY
+/////////////////////////////////////////////////////////////////////////////////////////////////		
+		
+		
+1.ile razy ksia¿ki danego autora by³a wypo¿yczana
+
+CREATE PROCEDURE statystyki_autor (in imie VARCHAR(40), nazwisko varchar(40))
+	SELECT autor.imie, autor.nazwisko, count(idWypozyczenie) as Iloœæ_wypo¿yczeñ 
+    from wypozyczenie 
+    inner join ksiazka on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    inner join autor on autor.idAutor = ksiazka.idAutor
+    where imie = autor.imie or nazwisko = autor.nazwisko ;
+
+2.Ile dany uzytkownik wypozyczyl ksiazek
+
+CREATE PROCEDURE statystyki_uzytkownik (in login VARCHAR(40))
+	SELECT uzytkownik.login, count(idWypozyczenie) as Iloœæ_wypo¿yczeñ 
+    from wypozyczenie 
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    where login = uzytkownik.login ;
+
+3. Ile razy dana ksi¹¿ka by³a wypo¿yczana
+
+CREATE PROCEDURE statystyki_ksiazka (in tytul VARCHAR(255))
+	SELECT tytul, count(idWypozyczenie) as Iloœæ_wypo¿yczeñ from wypozyczenie ;
+
+4. Wyszukuje w bazie ksia¿ek po imieniu autora nazwisku autora tytule wydawnictwie lub gatunku
+
+CREATE PROCEDURE wyszukaj (in tekst VARCHAR(255))
+	SELECT  * from dane_ksiazki
+    where imie_autora = tekst 
+    or nazwisko_autora = tekst 
+    or tytul = tekst 
+    or wydawnictwo = tekst 
+    or gatunek = tekst;
+	
+-------------------------------------------------------------------------------------------------
+NOWE
+-------------------------------------------------------------------------------------------------    
+5.1. Uzytkownicy malejaco po ilosci wypozyczen
+
+CREATE PROCEDURE uzytkownicy_stat1()
+	SELECT dane.imie, dane.nazwisko, uzytkownik.login,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    left join dane on dane.idUzytkownika = uzytkownik.idUzytkownika
+    where uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    group by login
+	order by Ilosc_wypozyczen DESC;
+
+5.2. -||- rosn¹co
+
+CREATE PROCEDURE uzytkownicy_stat()
+	SELECT dane.imie, dane.nazwisko, uzytkownik.login,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    left join dane on dane.idUzytkownika = uzytkownik.idUzytkownika
+    where uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    group by login
+	order by Ilosc_wypozyczen ASC;
+
+6.1 Autorzy malejaco po ilosci wypozyczen
+
+CREATE PROCEDURE autor_stat()
+	SELECT autor.imie, autor.nazwisko,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    group by autor.nazwisko
+	order by Ilosc_wypozyczen DESC;
+
+6.2 Autorzy rosn¹co po ilosci wypozyczen
+
+CREATE PROCEDURE autor_stat2()
+	SELECT autor.imie, autor.nazwisko,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    group by autor.nazwisko
+	order by Ilosc_wypozyczen ASC;
+	
+	
+7.1 ksiazki malejaco po iloœci wypo¿yczeñ
+
+
+CREATE PROCEDURE ksiazki_stat()
+	SELECT autor.imie, autor.nazwisko, ksiazka.tytul,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    group by ksiazka.tytul
+	order by Ilosc_wypozyczen DESC;
+	
+7.2 ksiazki rosn¹co po iloœci wypo¿yczeñ
+
+CREATE PROCEDURE ksiazki_stat2()
+
+
+	SELECT autor.imie, autor.nazwisko, ksiazka.tytul,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsi¹¿ka = wypozyczenie.idKsiazka
+    group by ksiazka.tytul
+	order by Ilosc_wypozyczen ASC;
+	
+	
+8 Wyszukuje wœród u¿ytkowników po (loginie, imieniu, nazwisku, mailu lub mieœcie)
+
+CREATE PROCEDURE wyszukaj_uzytkownika (in tekst VARCHAR(255))
+	SELECT  * from dane_konta
+    where login = tekst 
+    or imie = tekst 
+    or nazwisko = tekst 
+    or email = tekst 
+    or miasto = tekst;

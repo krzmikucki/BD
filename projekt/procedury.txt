@@ -1,0 +1,115 @@
+1.ile razy ksiażki danego autora była wypożyczana
+
+CREATE PROCEDURE statystyki_autor (in imie VARCHAR(40), nazwisko varchar(40))
+	SELECT autor.imie, autor.nazwisko, count(idWypozyczenie) as Ilość_wypożyczeń 
+    from wypozyczenie 
+    inner join ksiazka on ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    inner join autor on autor.idAutor = ksiazka.idAutor
+    where imie = autor.imie or nazwisko = autor.nazwisko ;
+
+2.Ile dany uzytkownik wypozyczyl ksiazek
+
+CREATE PROCEDURE statystyki_uzytkownik (in login VARCHAR(40))
+	SELECT uzytkownik.login, count(idWypozyczenie) as Ilość_wypożyczeń 
+    from wypozyczenie 
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    where login = uzytkownik.login ;
+
+3. Ile razy dana książka była wypożyczana
+
+CREATE PROCEDURE statystyki_ksiazka (in tytul VARCHAR(255))
+	SELECT tytul, count(idWypozyczenie) as Ilość_wypożyczeń from wypozyczenie ;
+
+4. Wyszukuje w bazie ksiażek po imieniu autora nazwisku autora tytule wydawnictwie lub gatunku
+
+CREATE PROCEDURE wyszukaj (in tekst VARCHAR(255))
+	SELECT  * from dane_ksiazki
+    where imie_autora = tekst 
+    or nazwisko_autora = tekst 
+    or tytul = tekst 
+    or wydawnictwo = tekst 
+    or gatunek = tekst;
+	
+-------------------------------------------------------------------------------------------------
+NOWE
+-------------------------------------------------------------------------------------------------    
+5.1. Uzytkownicy malejaco po ilosci wypozyczen
+
+CREATE PROCEDURE uzytkownicy_stat1()
+	SELECT dane.imie, dane.nazwisko, uzytkownik.login,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    left join dane on dane.idUzytkownika = uzytkownik.idUzytkownika
+    where uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    group by login
+	order by Ilosc_wypozyczen DESC;
+
+5.2. -||- rosnąco
+
+CREATE PROCEDURE uzytkownicy_stat()
+	SELECT dane.imie, dane.nazwisko, uzytkownik.login,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join uzytkownik on uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    left join dane on dane.idUzytkownika = uzytkownik.idUzytkownika
+    where uzytkownik.idUzytkownika = wypozyczenie.idUzytkownika
+    group by login
+	order by Ilosc_wypozyczen ASC;
+
+6.1 Autorzy malejaco po ilosci wypozyczen
+
+CREATE PROCEDURE autor_stat()
+	SELECT autor.imie, autor.nazwisko,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    group by autor.nazwisko
+	order by Ilosc_wypozyczen DESC;
+
+6.2 Autorzy rosnąco po ilosci wypozyczen
+
+CREATE PROCEDURE autor_stat2()
+	SELECT autor.imie, autor.nazwisko,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    group by autor.nazwisko
+	order by Ilosc_wypozyczen ASC;
+	
+	
+7.1 ksiazki malejaco po ilości wypożyczeń
+
+
+CREATE PROCEDURE ksiazki_stat()
+	SELECT autor.imie, autor.nazwisko, ksiazka.tytul,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    group by ksiazka.tytul
+	order by Ilosc_wypozyczen DESC;
+	
+7.2 ksiazki rosnąco po ilości wypożyczeń
+
+CREATE PROCEDURE ksiazki_stat2()
+
+
+	SELECT autor.imie, autor.nazwisko, ksiazka.tytul,  count(idWypozyczenie) as Ilosc_wypozyczen 
+	from wypozyczenie
+    inner join ksiazka on ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    left join autor on autor.idAutor = ksiazka.idAutor
+    where ksiazka.idKsiążka = wypozyczenie.idKsiazka
+    group by ksiazka.tytul
+	order by Ilosc_wypozyczen ASC;
+	
+	
+8 Wyszukuje wśród użytkowników po (loginie, imieniu, nazwisku, mailu lub mieście)
+
+CREATE PROCEDURE wyszukaj_uzytkownika (in tekst VARCHAR(255))
+	SELECT  * from dane_konta
+    where login = tekst 
+    or imie = tekst 
+    or nazwisko = tekst 
+    or email = tekst 
+    or miasto = tekst;
